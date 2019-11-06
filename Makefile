@@ -1,7 +1,7 @@
 all: netfilter_block
 
-netfilter_block: nfqnl_test.c
-	gcc -Wall -g -o  nfqnl_test nfqnl_test.c
+netfilter_block: main.cpp
+	gcc -Wall -g -o  netfilter_block main.cpp
 
 clean:
 	rm -f netfilter_block
