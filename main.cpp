@@ -143,7 +143,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 	int ret = nfq_get_payload(nfa, &packet);
 	if(ret < 0) {
 		struct header * header = packet;
-		int tcp_len = 20 + header->ip_hdr.iph_ihl << 2 + header->tcp_hdr.tcph_reserved;
+		int tcp_len = 20 + header->ip_hdr.iph_ihl << 2 + header->tcp_hdr.tcph_reserved << 2;
 		cout << tcp_len;
 		if(htons(header->eth_hdr.eth_type) == TYPE_IPV4 && 
 			header->ip_hdr.iph_protocol == PTC_TCP && 
