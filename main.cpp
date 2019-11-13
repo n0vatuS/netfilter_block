@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <linux/types.h>
@@ -12,12 +13,12 @@
 #define HW_ADDR_LEN 	6
 #define IP_ADDR_LEN 	4
 #define TYPE_IPV4  0x0800
-#define PTC_TCP    		6
+#define PTC_TCP    	6
 
 typedef struct eth_hdr {
-    uint8_t dst_addr[HW_ADDR_LEN];
-    uint8_t src_addr[HW_ADDR_LEN];
-    uint16_t eth_type;
+	uint8_t dst_addr[HW_ADDR_LEN];
+   	uint8_t src_addr[HW_ADDR_LEN];
+	uint16_t eth_type;
 } ETHER;
 
 typedef struct ip_hdr {
@@ -25,12 +26,11 @@ typedef struct ip_hdr {
 	uint8_t iph_tos;
 	uint16_t iph_len;
 	uint16_t iph_ident;
-	uint8_t iph_flags;
 	uint16_t iph_offset;
 	uint8_t iph_ttl;
 	uint8_t iph_protocol;
 	uint16_t iph_chksum;
-    uint8_t iph_source[IP_ADDR_LEN], iph_dest[IP_ADDR_LEN];
+	uint8_t iph_source[IP_ADDR_LEN], iph_dest[IP_ADDR_LEN];
 } IP;
 
 typedef struct tcp_hdr {
@@ -46,10 +46,9 @@ typedef struct tcp_hdr {
 } TCP;
 
 typedef struct header {
-	ETHER eth_hdr;
 	IP ip_hdr;
 	TCP tcp_hdr;
-};
+}header;
 
 char * host_name;
 
@@ -57,6 +56,16 @@ void usage(){
   printf("syntax : netfilter_block <host>\n");
   printf("sample : netfilter_block test.gilgil.net\n");
   exit(1);
+}
+
+void dump(unsigned char * buf, int size) {
+	int i;
+	for(i = 0; i < size; i++) {
+		if(i%16 == 0) {
+			printf("\n");
+		}
+		printf("%02x ",buf[i]);
+	}
 }
 
 bool compare_method(unsigned char * packet) {
@@ -141,15 +150,15 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 
 	unsigned char * packet;
 	int ret = nfq_get_payload(nfa, &packet);
-	if(ret < 0) {
-		struct header * header = packet;
-		int tcp_len = 20 + header->ip_hdr.iph_ihl << 2 + header->tcp_hdr.tcph_reserved << 2;
-		if(ntohs(header->eth_hdr.eth_type) == TYPE_IPV4 && 
-			header->ip_hdr.iph_protocol == PTC_TCP && 
-			header->ip_hdr.iph_len - tcp_len > 0 &&
-			compare_method(packet + tcp_len) &&
-			check_host(packet + tcp_len)) {
-			printf("packet blocked...\n");
+	// dump(packet, 40);
+	if(ret > 0) {
+		struct header * header = (struct header *)packet;
+		int tcp_len = (header->ip_hdr.iph_ihl << 2) + (header->tcp_hdr.tcph_offset << 2);
+		if(header->ip_hdr.iph_protocol == PTC_TCP && 
+		   header->ip_hdr.iph_len - tcp_len > 0 &&
+		   compare_method(packet + tcp_len) &&
+		   check_host(packet + tcp_len)) {
+			printf("\n\npacket blocked...\n\n");
 			return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
 		}
 	}
